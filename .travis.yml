@@ -12,6 +12,9 @@ cache:
     - $HOME/.ivy2/cache
     - $HOME/.sbt
 
+before_install:
+  - "test -z \"$encrypted_a5792b1b651c_key\" || (openssl aes-256-cbc -K $encrypted_a5792b1b651c_key -iv $encrypted_a5792b1b651c_iv -in project/secrets.tar.enc -out project/secrets.tar -d && tar -xf project/secrets.tar -C project)"
+
 stages:
   - name: lint
   - name: test
@@ -42,3 +45,5 @@ jobs:
 
 env:
   global:
+    - secure: HWyuy9G5OHcbJy4G6ThmWfdwMJ9x9RP3ICpd/Lg9Offj+6ruMLRq15nilRn5P3ZOE/0EOfdT+llU9UqjAKSoiIu2RCur71S1i3Uqoey1m9Nmmku/yS2GjumRATFVDgCP/9SMknNCm5LssMIU2DDOiUmYYvt7jGX+RuhQocTszrSeh3ezQJimV048YP30nJz4rTOkIvMVa6u3ePNMdtCI5bf33a1Jczut6hjHowojqdidH624AV6y3KcJRzuzgrrrKS5wAJegQJglbIWjh5++pryZ/KPnKjz2wW2G7wkmeaWFhSPBzIxnBas9uT2cgpvAOjtiIWfRXfa7x0E5yS73qNY0M+h7hTdrJnyCYizywiPpdNNHjqX1g6oTWxh3fX06RmjDZbLIlKSw8ytxcqrdpLVOT+BaznOwhmlpqn8CU9+Wqi3szlr/8hEIjYrQqkAKFQIci6qdCy9+a0jkzAgS34GjINlqGfPnObd9qi8iyKi0h0mlKVs8FKSfyYPrOEh1THYG5NpNyhXivNyenki98yfdol2TC9Wl6DORjYArISvUNw6ves+LMbq+jpahub/EMRaAGvuav7n0j0dKvtDhl4oq8dwWTFis3iZiyusXyeZMPigpPAoRN4dFRnSdnGnILgLnRRcRGsGRlSF09YWaVEAfrw2d5L9NQ2epfReyZ2s=
+    - secure: nePsuI6jTlGerrtEKYV9jzPrcBpodOMcTAZO2GNfHlMkGe6GY/XeE3gCQi/cB1TBYqbc/xUALvVcICiiUVwhzIlAyUQEs6nMdIwm+QdR3UE4ilSzUoRDWvH8S/WdUqwSIsZ62wtVdvubKltc9twyq3LuvdDBp5q7Rksm82eQXuABglAyvel1HaNu6Rf4thAliYZ4TMjW0ci3NIWvYYQUiiqNxQApz/vsZEyZJi24fsw9NfCqY4MkFyrE4Z4hOusiaeJehP5LA7BIYiTxHl6OfyQa/fTZnQOesa/QxIE4sXFF114nLcjFsAp1c4cjDw88NxqTAwqTi+n0aUHt32WZFS2dIHIjvmPjUVNF8b0F2bt+PxkcJGTYaB4w46ONhB9kNLVBY3T0jYuIH3mz+gXaIbDA9I9ZoG4+8DQ9nxf+9tTV3CwHwSENxfvXumNULnSXpXuGp/ZysplIQ8Gh/hqPGzoMVI5N7BmAx6/hIpgjH+XoCagabzm4etpznYfyiGZ9BqopcDY/n9q0xIvH9fIn7qp427jtoUe+UYdZO/DHLg4HeX/ppyIPbvo8664DvKcmZ7h1r3GpeveGnZ43mSP8afsSFyN7IQqX8RvfdrIuA9Ra1ojJ3Cv4c46UjD1DenPkeOsQooM/yg07Hs0Mw1vgtHG5Inar92Iz/RkomKRsa4g=
