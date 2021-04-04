@@ -62,6 +62,9 @@ lazy val typine = (project in file("."))
   .settings(
     name := "typine",
     description := "Type inequality witnesses for Scala",
+    sonatypeProfileName := "com.github.mvv",
+    sonatypeSessionName := s"Typine_${version.value}",
+    commands += sonatypeBundleReleaseIfNotSnapshot,
     scalaSource in Compile := {
       if (isScala2(scalaVersion.value)) {
         baseDirectory.value / "src" / "main" / "scala2"
