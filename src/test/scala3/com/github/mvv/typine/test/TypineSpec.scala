@@ -9,12 +9,24 @@ class TypineSpec extends AnyFlatSpec:
     "summon[String !:= Char]" must compile
   }
 
-  // FIXME: Doesn't actually compile, but the matcher fails
+  // FIXME: Doesn't actually compile, but the matchers fail
   /*
   it must "fail to differentiate type parameters" in {
     "def f[A, B] = summon[A !:= B]" mustNot compile
   }
+
+  it must "fail to differentiate type parameters in type arguments" in {
+    "def f[A, B] = summon[Option[A] !:= Option[B]]" mustNot compile
+  }
   */
+
+  it must "use symmetry" in {
+    "def f[A, B](using A !:= B) = summon[B !:= A]" must compile
+  }
+
+  it must "use symmetry in type arguments" in {
+    "def f[A, B](using A !:= B) = summon[Option[B] !:= Option[A]]" must compile
+  }
 
   it must "differentiate simple types from applied ones" in {
     "def f[A] = summon[Option[A] !:= Int]" must compile

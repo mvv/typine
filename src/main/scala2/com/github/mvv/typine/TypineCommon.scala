@@ -8,9 +8,12 @@ import scala.language.experimental.macros
 
 trait TypineCommon {
   @implicitNotFound("could not prove that types ${A} and ${B} are different")
-  sealed trait !:=[A, B]
+  sealed trait !:=[A, B] {
+    implicit def flip: B !:= A
+  }
   object !:= {
     private val singleton = new !:=[Any, Any] {
+      implicit override def flip: Any !:= Any = this
       override def toString: String = "!:="
     }
     def unsafeMake[A, B]: A !:= B = singleton.asInstanceOf[A !:= B]

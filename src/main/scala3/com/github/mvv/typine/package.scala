@@ -5,13 +5,18 @@ import com.github.mvv.typine.impl.TypineMacros
 import scala.annotation.implicitNotFound
 
 @implicitNotFound("could not prove that types ${A} and ${B} are different")
-sealed trait !:=[A, B]
+sealed trait !:=[A, B]:
+  given flip: (B !:= A)
 
-object `!:=`:
+sealed trait TypineLow:
+  inline given derive[A, B]: (A !:= B) = ${TypineMacros.deriveUnequal[A, B]}
+
+object !:= extends TypineLow:
   private val singleton = new !:=[Any, Any]:
+    override given flip: (Any !:= Any) = this
     override def toString: String = "!:="
   def unsafeMake[A, B]: A !:= B = singleton.asInstanceOf[A !:= B]
-  inline given derive[A, B]: (A !:= B) = ${TypineMacros.deriveUnequal[A, B]}
+  inline given flip[A, B](using witness: B !:= A): (A !:= B) = witness.flip
 
 def substituteCoBounded[L, U >: L, From >: L <: U, To >: L <: U, F[+_ >: L <: U]](f: F[From])(using From <:< To): F[To] =
   f.asInstanceOf[F[To]]

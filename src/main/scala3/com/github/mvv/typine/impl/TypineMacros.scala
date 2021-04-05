@@ -12,19 +12,19 @@ object TypineMacros:
     case Unknown
 
   @tailrec
-  private def isStableQualifier(qctx: Quotes)(tpe: qctx.reflect.TypeRepr): Boolean =
+  private def isStableQualifier(using qctx: Quotes)(tpe: qctx.reflect.TypeRepr): Boolean =
     import qctx.reflect._
     tpe match
       case tr: TermRef =>
         val flags = tr.termSymbol.flags
         if flags.is(Flags.Module) || flags.is(Flags.Package) then
-          isStableQualifier(qctx)(tr.qualifier)
+          isStableQualifier(tr.qualifier)
         else
           false
       case ThisType(tr: TypeRef) =>
         val flags = tr.typeSymbol.flags
         if flags.is(Flags.Package) then
-          isStableQualifier(qctx)(tr.qualifier)
+          isStableQualifier(tr.qualifier)
         else
           false
       case NoPrefix() =>
@@ -32,63 +32,58 @@ object TypineMacros:
       case _ =>
         false
 
-  private def isStableTypeRef(qctx: Quotes)(tr: qctx.reflect.TypeRef): Boolean =
+  private def isStableTypeRef(using qctx: Quotes)(tr: qctx.reflect.TypeRef): Boolean =
     import qctx.reflect._
     val flags = tr.typeSymbol.flags
-    !flags.is(Flags.Deferred) && !flags.is(Flags.Param) && isStableQualifier(qctx)(tr.qualifier)
+    !flags.is(Flags.Deferred) && !flags.is(Flags.Param) && isStableQualifier(tr.qualifier)
 
-  def compareTypeReprs(qctx: Quotes)(t1: qctx.reflect.TypeRepr, t2: qctx.reflect.TypeRepr): ComparedTypes =
+  def searchUnequal(using qctx: Quotes)(
+        t1: qctx.reflect.TypeRepr, t2: qctx.reflect.TypeRepr): qctx.reflect.ImplicitSearchResult =
     import qctx.reflect._
-    def recur(t1: TypeRepr, t2: TypeRepr): ComparedTypes =
-      if t1 =:= t2 then
-        ComparedTypes.Same
-      else
-        (t1.dealias.simplified, t2.dealias.simplified) match
-          case (tr1: TypeRef, tr2: TypeRef) =>
-            if isStableTypeRef(qctx)(tr1) && isStableTypeRef(qctx)(tr2) then
-              ComparedTypes.Different
-            else
-              ComparedTypes.Unknown
-          case (tr1: TypeRef, AppliedType(tcon2, _)) =>
-            tcon2.dealias.simplified match
-              case tr2: TypeRef =>
-                if isStableTypeRef(qctx)(tr1) && isStableTypeRef(qctx)(tr2) then
-                  ComparedTypes.Different
-                else
-                  ComparedTypes.Unknown
-              case _ =>
-                ComparedTypes.Unknown
-          case (AppliedType(tcon1, _), tr2: TypeRef) =>
-            tcon1.dealias.simplified match
-              case tr1: TypeRef =>
-                if isStableTypeRef(qctx)(tr1) && isStableTypeRef(qctx)(tr2) then
-                  ComparedTypes.Different
-                else
-                  ComparedTypes.Unknown
-              case _ =>
-                ComparedTypes.Unknown
-          case (AppliedType(tcon1, targs1), AppliedType(tcon2, targs2)) =>
-            recur(tcon1, tcon2) match
-              case ComparedTypes.Different =>
-                ComparedTypes.Different
-              case ComparedTypes.Same =>
-                targs1.iterator.zip(targs2.iterator).foreach {
-                  case (targ1, targ2) =>
-                    Implicits.search(TypeRepr.of(using Type.of[!:=](using qctx)).appliedTo(List(targ1, targ2))) match
-                      case _: ImplicitSearchSuccess =>
-                        return ComparedTypes.Different
-                      case _: ImplicitSearchFailure =>
-                }
-                ComparedTypes.Unknown
-              case ComparedTypes.Unknown =>
-                ComparedTypes.Unknown
-          case _ =>
+    Implicits.search(TypeRepr.of[!:=].appliedTo(List(t1, t2)))
+
+  def compareTypeReprs(using qctx: Quotes)(t1: qctx.reflect.TypeRepr, t2: qctx.reflect.TypeRepr): ComparedTypes =
+    import qctx.reflect._
+    if t1 =:= t2 then
+      ComparedTypes.Same
+    else
+      (t1.dealias.simplified, t2.dealias.simplified) match
+        case (tr1: TypeRef, tr2: TypeRef) =>
+          if isStableTypeRef(tr1) && isStableTypeRef(tr2) then
+            ComparedTypes.Different
+          else
             ComparedTypes.Unknown
-    recur(t1, t2)
+        case (tr1: TypeRef, AppliedType(tcon2: TypeRef, _)) =>
+          if isStableTypeRef(tr1) && isStableTypeRef(tcon2) then
+            ComparedTypes.Different
+          else
+            ComparedTypes.Unknown
+        case (AppliedType(tcon1: TypeRef, _), tr2: TypeRef) =>
+          if isStableTypeRef(tcon1) && isStableTypeRef(tr2) then
+            ComparedTypes.Different
+          else
+            ComparedTypes.Unknown
+        case (AppliedType(tcon1: TypeRef, targs1), AppliedType(tcon2: TypeRef, targs2)) =>
+          if isStableTypeRef(tcon1) && isStableTypeRef(tcon2) then
+            if tcon1 =:= tcon2 then
+              targs1.iterator.zip(targs2.iterator).foreach {
+                case (targ1, targ2) =>
+                  searchUnequal(targ1, targ2) match
+                    case _: ImplicitSearchSuccess =>
+                      return ComparedTypes.Different
+                    case _: ImplicitSearchFailure =>
+              }
+              ComparedTypes.Unknown
+            else
+              ComparedTypes.Different
+          else
+            ComparedTypes.Unknown
+        case _ =>
+          ComparedTypes.Unknown
 
   def deriveUnequal[A: Type, B: Type](using qctx: Quotes): Expr[A !:= B] =
     import qctx.reflect._
-    compareTypeReprs(qctx)(TypeRepr.of[A], TypeRepr.of[B]) match
+    compareTypeReprs(TypeRepr.of[A], TypeRepr.of[B]) match
       case ComparedTypes.Different =>
         '{(!:=).unsafeMake[A, B]}
       case ComparedTypes.Same =>
