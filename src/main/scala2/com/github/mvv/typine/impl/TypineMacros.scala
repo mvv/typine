@@ -6,13 +6,6 @@ import scala.annotation.tailrec
 import scala.reflect.macros.blackbox
 
 object TypineMacros {
-  sealed trait ComparedTypes
-  object ComparedTypes {
-    case object Same extends ComparedTypes
-    case object Different extends ComparedTypes
-    case object Unknown extends ComparedTypes
-  }
-
   @tailrec
   private def isStableQualifier(c: blackbox.Context)(t: c.Type): Boolean = {
     import c.universe._
@@ -43,7 +36,7 @@ object TypineMacros {
     }
     c.inferImplicitValue(c.internal.typeRef(ineqPre, ineqSym, List(t2, t1))) match {
       case q"com.github.mvv.typine.`package`.!:=.derive[$_, $_]" =>
-        if (compareTypes(c)(t1, t2) == ComparedTypes.Different) {
+        if (areDifferentTypes(c)(t1, t2)) {
           q"_root_.com.github.mvv.typine.!:=.unsafeMake[$t1, $t2]"
         } else {
           EmptyTree
@@ -55,31 +48,27 @@ object TypineMacros {
     }
   }
 
-  def compareTypes(c: blackbox.Context)(t1: c.Type, t2: c.Type): ComparedTypes = {
+  def areDifferentTypes(c: blackbox.Context)(t1: c.Type, t2: c.Type): Boolean = {
     import c.universe._
-    if (t1 =:= t2) {
-      ComparedTypes.Same
-    } else {
-      (t1.dealias, t2.dealias) match {
-        case (TypeRef(pre1, sym1, args1), TypeRef(pre2, sym2, args2)) =>
-          if (isStableQualifier(c)(pre1) && isStableQualifier(c)(pre2) && sym1.isClass && sym2.isClass) {
-            if (pre1 =:= pre2 && sym1 == sym2) {
-              args1.iterator.zip(args2.iterator).foreach {
-                case (arg1, arg2) =>
-                  if (searchUnequal(c)(arg1, arg2) != EmptyTree) {
-                    return ComparedTypes.Different
-                  }
-              }
-              ComparedTypes.Unknown
-            } else {
-              ComparedTypes.Different
+    (t1.dealias, t2.dealias) match {
+      case (TypeRef(pre1, sym1, args1), TypeRef(pre2, sym2, args2)) =>
+        if (isStableQualifier(c)(pre1) && isStableQualifier(c)(pre2) && sym1.isClass && sym2.isClass) {
+          if (pre1 =:= pre2 && sym1 == sym2) {
+            args1.iterator.zip(args2.iterator).foreach {
+              case (arg1, arg2) =>
+                if (searchUnequal(c)(arg1, arg2) != EmptyTree) {
+                  return true
+                }
             }
+            false
           } else {
-            ComparedTypes.Unknown
+            true
           }
-        case _ =>
-          ComparedTypes.Unknown
-      }
+        } else {
+          false
+        }
+      case _ =>
+        false
     }
   }
 
@@ -93,12 +82,10 @@ object TypineMacros {
           return q"$tree.flip"
         }
     }
-    compareTypes(c)(tag1.tpe, tag2.tpe) match {
-      case ComparedTypes.Different =>
+    areDifferentTypes(c)(tag1.tpe, tag2.tpe) match {
+      case true =>
         q"_root_.com.github.mvv.typine.!:=.unsafeMake[${tag1.tpe}, ${tag2.tpe}]"
-      case ComparedTypes.Same =>
-        c.abort(c.enclosingPosition, s"types ${tag1.tpe} and ${tag2.tpe} are the same")
-      case ComparedTypes.Unknown =>
+      case false =>
         c.abort(c.enclosingPosition, s"could not prove that types ${tag1.tpe} and ${tag2.tpe} are different")
     }
   }

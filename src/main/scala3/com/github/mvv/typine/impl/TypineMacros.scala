@@ -6,11 +6,6 @@ import scala.annotation.tailrec
 import scala.quoted.*
 
 object TypineMacros:
-  enum ComparedTypes:
-    case Same
-    case Different
-    case Unknown
-
   @tailrec
   private def isStableQualifier(using qctx: Quotes)(tpe: qctx.reflect.TypeRepr): Boolean =
     import qctx.reflect._
@@ -42,51 +37,46 @@ object TypineMacros:
     import qctx.reflect._
     Implicits.search(TypeRepr.of[!:=].appliedTo(List(t1, t2)))
 
-  def compareTypeReprs(using qctx: Quotes)(t1: qctx.reflect.TypeRepr, t2: qctx.reflect.TypeRepr): ComparedTypes =
+  def areDifferentTypes(using qctx: Quotes)(t1: qctx.reflect.TypeRepr, t2: qctx.reflect.TypeRepr): Boolean =
     import qctx.reflect._
-    if t1 =:= t2 then
-      ComparedTypes.Same
-    else
-      (t1.dealias.simplified, t2.dealias.simplified) match
-        case (tr1: TypeRef, tr2: TypeRef) =>
-          if isStableTypeRef(tr1) && isStableTypeRef(tr2) then
-            ComparedTypes.Different
+    (t1.dealias.simplified, t2.dealias.simplified) match
+      case (tr1: TypeRef, tr2: TypeRef) =>
+        if isStableTypeRef(tr1) && isStableTypeRef(tr2) then
+          !(t1 =:= t2)
+        else
+          false
+      case (tr1: TypeRef, AppliedType(tcon2: TypeRef, _)) =>
+        if isStableTypeRef(tr1) && isStableTypeRef(tcon2) then
+          true
+        else
+          false
+      case (AppliedType(tcon1: TypeRef, _), tr2: TypeRef) =>
+        if isStableTypeRef(tcon1) && isStableTypeRef(tr2) then
+          true
+        else
+          false
+      case (AppliedType(tcon1: TypeRef, targs1), AppliedType(tcon2: TypeRef, targs2)) =>
+        if isStableTypeRef(tcon1) && isStableTypeRef(tcon2) then
+          if tcon1 =:= tcon2 then
+            targs1.iterator.zip(targs2.iterator).foreach {
+              case (targ1, targ2) =>
+                searchUnequal(targ1, targ2) match
+                  case _: ImplicitSearchSuccess =>
+                    return true
+                  case _: ImplicitSearchFailure =>
+            }
+            false
           else
-            ComparedTypes.Unknown
-        case (tr1: TypeRef, AppliedType(tcon2: TypeRef, _)) =>
-          if isStableTypeRef(tr1) && isStableTypeRef(tcon2) then
-            ComparedTypes.Different
-          else
-            ComparedTypes.Unknown
-        case (AppliedType(tcon1: TypeRef, _), tr2: TypeRef) =>
-          if isStableTypeRef(tcon1) && isStableTypeRef(tr2) then
-            ComparedTypes.Different
-          else
-            ComparedTypes.Unknown
-        case (AppliedType(tcon1: TypeRef, targs1), AppliedType(tcon2: TypeRef, targs2)) =>
-          if isStableTypeRef(tcon1) && isStableTypeRef(tcon2) then
-            if tcon1 =:= tcon2 then
-              targs1.iterator.zip(targs2.iterator).foreach {
-                case (targ1, targ2) =>
-                  searchUnequal(targ1, targ2) match
-                    case _: ImplicitSearchSuccess =>
-                      return ComparedTypes.Different
-                    case _: ImplicitSearchFailure =>
-              }
-              ComparedTypes.Unknown
-            else
-              ComparedTypes.Different
-          else
-            ComparedTypes.Unknown
-        case _ =>
-          ComparedTypes.Unknown
+            true
+        else
+          false
+      case _ =>
+        false
 
   def deriveUnequal[A: Type, B: Type](using qctx: Quotes): Expr[A !:= B] =
     import qctx.reflect._
-    compareTypeReprs(TypeRepr.of[A], TypeRepr.of[B]) match
-      case ComparedTypes.Different =>
+    areDifferentTypes(TypeRepr.of[A], TypeRepr.of[B]) match
+      case true =>
         '{(!:=).unsafeMake[A, B]}
-      case ComparedTypes.Same =>
-        report.throwError(s"types ${Type.show[A]} and ${Type.show[B]} are the same")
-      case ComparedTypes.Unknown =>
+      case false =>
         report.throwError(s"could not prove that types ${Type.show[A]} and ${Type.show[B]} are different")

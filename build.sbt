@@ -35,7 +35,7 @@ lazy val sonatypeBundleReleaseIfNotSnapshot: Command = Command.command("sonatype
 
 inThisBuild(
   Seq(
-    crossScalaVersions := Seq("2.13.5", "2.12.13", "3.0.0-RC2"),
+    crossScalaVersions := Seq("3.0.0", "2.13.6", "2.12.14"),
     scalaVersion := crossScalaVersions.value.head,
     scalacOptions ++= Seq("-feature", "-deprecation", "-unchecked", "-Xfatal-warnings")
   )
@@ -55,8 +55,6 @@ def isScala2_13(version: String): Boolean =
 
 def isScala2(version: String): Boolean =
   scala2Minor(version).isDefined
-
-val scalatest = "org.scalatest" %% "scalatest" % "3.2.6"
 
 lazy val typine = (project in file("."))
   .settings(
@@ -106,5 +104,5 @@ lazy val typine = (project in file("."))
         Nil
       }
     },
-    libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.7" % Test
+    libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.9" % Test
   )
