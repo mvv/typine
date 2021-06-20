@@ -63,20 +63,20 @@ lazy val typine = (project in file("."))
     sonatypeProfileName := "com.github.mvv",
     sonatypeSessionName := s"Typine_${version.value}",
     commands += sonatypeBundleReleaseIfNotSnapshot,
-    scalaSource in Compile := {
+    Compile / scalaSource := {
       if (isScala2(scalaVersion.value)) {
         baseDirectory.value / "src" / "main" / "scala2"
       } else {
         baseDirectory.value / "src" / "main" / "scala3"
       }
     },
-    unmanagedSourceDirectories in Compile ++= {
+    Compile / unmanagedSourceDirectories ++= {
       scala2Minor(scalaVersion.value) match {
         case Some(m) => Seq(baseDirectory.value / "src" / "main" / s"scala2_$m")
         case None    => Nil
       }
     },
-    scalaSource in Test := {
+    Test / scalaSource := {
       if (isScala2(scalaVersion.value)) {
         baseDirectory.value / "src" / "test" / "scala2"
       } else {
