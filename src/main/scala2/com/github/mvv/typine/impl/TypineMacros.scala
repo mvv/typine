@@ -54,11 +54,10 @@ object TypineMacros {
       case (TypeRef(pre1, sym1, args1), TypeRef(pre2, sym2, args2)) =>
         if (isStableQualifier(c)(pre1) && isStableQualifier(c)(pre2) && sym1.isClass && sym2.isClass) {
           if (pre1 =:= pre2 && sym1 == sym2) {
-            args1.iterator.zip(args2.iterator).foreach {
-              case (arg1, arg2) =>
-                if (searchUnequal(c)(arg1, arg2) != EmptyTree) {
-                  return true
-                }
+            args1.iterator.zip(args2.iterator).foreach { case (arg1, arg2) =>
+              if (searchUnequal(c)(arg1, arg2) != EmptyTree) {
+                return true
+              }
             }
             false
           } else {

@@ -9,7 +9,7 @@ sealed trait !:=[A, B]:
   given flip: (B !:= A)
 
 sealed trait TypineLow:
-  inline given derive[A, B]: (A !:= B) = ${TypineMacros.deriveUnequal[A, B]}
+  inline given derive[A, B]: (A !:= B) = ${ TypineMacros.deriveUnequal[A, B] }
 
 object !:= extends TypineLow:
   private val singleton = new !:=[Any, Any]:
@@ -18,10 +18,12 @@ object !:= extends TypineLow:
   def unsafeMake[A, B]: A !:= B = singleton.asInstanceOf[A !:= B]
   inline given flip[A, B](using witness: B !:= A): (A !:= B) = witness.flip
 
-def substituteCoBounded[L, U >: L, From >: L <: U, To >: L <: U, F[+_ >: L <: U]](f: F[From])(using From <:< To): F[To] =
+def substituteCoBounded[L, U >: L, From >: L <: U, To >: L <: U, F[+_ >: L <: U]](f: F[From])(
+    using From <:< To): F[To] =
   f.asInstanceOf[F[To]]
 
-def substituteContraBounded[L, U >: L, From >: L <: U, To >: L <: U, F[-_ >: L <: U]](f: F[To])(using From <:< To): F[From] =
+def substituteContraBounded[L, U >: L, From >: L <: U, To >: L <: U, F[-_ >: L <: U]](f: F[To])(
+    using From <:< To): F[From] =
   f.asInstanceOf[F[From]]
 
 def substituteBounded[L, U >: L, From >: L <: U, To >: L <: U, F[_ >: L <: U]](f: F[From])(using From =:= To): F[To] =
