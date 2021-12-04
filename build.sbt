@@ -5,7 +5,7 @@ import xerial.sbt.Sonatype._
 inThisBuild(
   Seq(
     organization := "com.github.mvv.typine",
-    version := "0.1-SNAPSHOT", // next is M3
+    version := "0.1-M3", // next is M4
     homepage := Some(url("https://github.com/mvv/typine")),
     scmInfo := Some(ScmInfo(url("https://github.com/mvv/typine"), "scm:git@github.com:mvv/typine.git")),
     licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
@@ -35,7 +35,7 @@ lazy val sonatypeBundleReleaseIfNotSnapshot: Command = Command.command("sonatype
 
 inThisBuild(
   Seq(
-    crossScalaVersions := Seq("3.0.0", "2.13.6", "2.12.14"),
+    crossScalaVersions := Seq("3.0.2", "2.13.7", "2.12.15"),
     scalaVersion := crossScalaVersions.value.head,
     scalacOptions ++= Seq("-feature", "-deprecation", "-unchecked", "-Xfatal-warnings")
   )
