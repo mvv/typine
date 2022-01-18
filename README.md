@@ -25,5 +25,5 @@ will be accepted.
 Add Typine to your dependencies
 
 ```scala
-libraryDependencies += "com.github.mvv.typine" %% "typine" % "0.1-SNAPSHOT"
+libraryDependencies += "com.github.mvv.typine" %% "typine" % "0.1-M3"
 ```
