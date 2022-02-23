@@ -6,23 +6,32 @@ import scala.annotation.tailrec
 import scala.reflect.macros.blackbox
 
 object TypineMacros {
-  @tailrec
   private def isStableQualifier(c: blackbox.Context)(t: c.Type): Boolean = {
     import c.universe._
-    t.dealias match {
-      case TypeRef(pre, sym, List()) =>
-        if (sym.isModule || sym.isPackage) {
-          isStableQualifier(c)(pre)
-        } else {
+    @tailrec
+    def isStable(inner: c.Type): Boolean =
+      inner.dealias match {
+        case TypeRef(pre, sym, List()) =>
+          (sym.isModule || sym.isPackage) && isStable(pre)
+        case SingleType(pre, sym) =>
+          if (sym.isModule || sym.isPackage) {
+            isStable(pre)
+          } else if (sym.isMethod) {
+            sym.asTerm.typeSignature match {
+              case NullaryMethodType(result) => isStable(result)
+              case _                         => false
+            }
+          } else {
+            sym.isTerm && isStable(sym.asTerm.typeSignature)
+          }
+        case ThisType(sym) =>
+          sym.isPackage
+        case NoPrefix =>
+          true
+        case _ =>
           false
-        }
-      case ThisType(sym) =>
-        sym.isPackage
-      case NoPrefix =>
-        true
-      case _ =>
-        false
-    }
+      }
+    isStable(t)
   }
 
   def searchUnequal(c: blackbox.Context)(t1: c.Type, t2: c.Type): c.Tree = {

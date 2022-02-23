@@ -6,35 +6,40 @@ import scala.annotation.tailrec
 import scala.quoted.*
 
 object TypineMacros:
-  @tailrec
   private def isStableQualifier(using qctx: Quotes)(tpe: qctx.reflect.TypeRepr): Boolean =
-    import qctx.reflect._
-    tpe match
-      case tr: TermRef =>
-        val flags = tr.termSymbol.flags
-        if flags.is(Flags.Module) || flags.is(Flags.Package) then isStableQualifier(tr.qualifier)
-        else false
-      case ThisType(tr: TypeRef) =>
-        val flags = tr.typeSymbol.flags
-        if flags.is(Flags.Package) then isStableQualifier(tr.qualifier)
-        else false
-      case NoPrefix() =>
-        true
-      case _ =>
-        false
+    import qctx.reflect.*
+    @tailrec
+    def isStable(inner: TypeRepr): Boolean =
+      inner match
+        case tr: TermRef =>
+          val sym = tr.termSymbol
+          val flags = sym.flags
+          if flags.is(Flags.Module) || flags.is(Flags.Package) then isStable(tr.qualifier)
+          else sym.isValDef && isStable(tr.widenTermRefByName)
+        case tr: TypeRef =>
+          val flags = tr.typeSymbol.flags
+          (flags.is(Flags.Module) || flags.is(Flags.Package)) && isStable(tr.qualifier)
+        case ThisType(tr: TypeRef) =>
+          val flags = tr.typeSymbol.flags
+          (flags.is(Flags.Module) || flags.is(Flags.Package)) && isStable(tr.qualifier)
+        case NoPrefix() =>
+          true
+        case _ =>
+          false
+    isStable(tpe)
 
   private def isStableTypeRef(using qctx: Quotes)(tr: qctx.reflect.TypeRef): Boolean =
-    import qctx.reflect._
+    import qctx.reflect.*
     val flags = tr.typeSymbol.flags
     !flags.is(Flags.Deferred) && !flags.is(Flags.Param) && isStableQualifier(tr.qualifier)
 
   def searchUnequal(
       using qctx: Quotes)(t1: qctx.reflect.TypeRepr, t2: qctx.reflect.TypeRepr): qctx.reflect.ImplicitSearchResult =
-    import qctx.reflect._
+    import qctx.reflect.*
     Implicits.search(TypeRepr.of[!:=].appliedTo(List(t1, t2)))
 
   def areDifferentTypes(using qctx: Quotes)(t1: qctx.reflect.TypeRepr, t2: qctx.reflect.TypeRepr): Boolean =
-    import qctx.reflect._
+    import qctx.reflect.*
     (t1.dealias.simplified, t2.dealias.simplified) match
       case (tr1: TypeRef, tr2: TypeRef) =>
         if isStableTypeRef(tr1) && isStableTypeRef(tr2) then !(t1 =:= t2)
@@ -61,7 +66,7 @@ object TypineMacros:
         false
 
   def deriveUnequal[A: Type, B: Type](using qctx: Quotes): Expr[A !:= B] =
-    import qctx.reflect._
+    import qctx.reflect.*
     areDifferentTypes(TypeRepr.of[A], TypeRepr.of[B]) match
       case true =>
         '{ (!:=).unsafeMake[A, B] }

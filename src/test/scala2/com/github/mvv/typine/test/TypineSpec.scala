@@ -5,6 +5,8 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.must.Matchers._
 
 class TypineSpec extends AnyFlatSpec {
+  import TypineSpec._
+
   "!:=" must "see that simple types differ" in {
     "implicitly[String !:= Char]" must compile
   }
@@ -27,5 +29,18 @@ class TypineSpec extends AnyFlatSpec {
 
   it must "differentiate simple types from applied ones" in {
     "def f[A] = implicitly[Option[A] !:= Int]" must compile
+  }
+
+  it must "follow through singleton types" in {
+    val outer: Outer.type = Outer
+    "implicitly[Outer.Inner1 !:= outer.Inner2]" must compile
+    "implicitly[Outer.Inner1 !:= outer.Inner1]" mustNot compile
+  }
+}
+
+object TypineSpec {
+  object Outer {
+    trait Inner1
+    trait Inner2
   }
 }
